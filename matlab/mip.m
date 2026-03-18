@@ -14,6 +14,7 @@ function varargout = mip(command, varargin)
 %   mip info <package>              - Display package information
 %   mip avail                       - List available packages in repository
 %   mip index                       - Display the mip package index URL.
+%   mip version                     - Display mip version
 %   mip help [command]              - Show help text for command
 
 if nargin < 1
@@ -74,6 +75,9 @@ switch command
 
     case 'root'
         fprintf('%s\n', mip.root());
+
+    case 'version'
+        fprintf('%s\n', mip.version());
 
     case 'help'
         if nargin > 1

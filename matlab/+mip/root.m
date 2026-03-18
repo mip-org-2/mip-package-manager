@@ -1,15 +1,15 @@
 function root = root()
 %ROOT   Get the mip root directory path.
-%   ROOT() returns the path to the mip root directory (default: ~/.mip). The mip
-%   directory can be customized by setting the MIP_DIR environment variable.
+%   ROOT() returns the path to the mip root directory by determining where
+%   this package is installed. Assumes the layout:
+%     <root>/packages/mip/mip/+mip/root.m
 
-% Check for MIP_DIR environment variable
-root = getenv('MIP_DIR');
-
-if isempty(root)
-    % Default to ~/.mip
-    home = char(java.lang.System.getProperty('user.home'));
-    root  = fullfile(home, '.mip');
-end
+% Navigate up from this file's location:
+%   +mip/root -> +mip -> mip (source) -> mip (package) -> packages -> root
+this_dir = fileparts(mfilename('fullpath'));   % .../+mip
+source_dir = fileparts(this_dir);             % .../mip/mip
+package_dir = fileparts(source_dir);          % .../packages/mip
+packages_dir = fileparts(package_dir);        % .../packages
+root = fileparts(packages_dir);               % .../root
 
 end
