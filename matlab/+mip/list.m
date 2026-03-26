@@ -64,7 +64,9 @@ loadedPackages = sort(loadedPackages);
 notLoadedPackages = sort(notLoadedPackages);
 
 % Display loaded packages section
-if ~isempty(loadedPackages)
+if isempty(loadedPackages)
+    fprintf('No packages are currently loaded. Use "mip load <package>" to load one.\n\n');
+else
     fprintf('=== Loaded Packages ===\n');
     for i = 1:length(loadedPackages)
         pkgName = loadedPackages{i};

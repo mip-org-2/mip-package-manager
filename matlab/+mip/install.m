@@ -284,3 +284,59 @@ function downloadAndInstall(packageName, packageInfo, packagesDir)
     end
 end
 
+function bestVariant = selectBestVariant(variants, currentArch)
+% Select the best package variant for the current architecture
+
+    if isempty(variants)
+        bestVariant = [];
+        return
+    end
+
+    % Filter to compatible variants (exact match or 'any')
+    compatible = {};
+    for i = 1:length(variants)
+        v = variants{i};
+        % Access architecture field safely
+        if isfield(v, 'architecture')
+            arch = v.architecture;
+        else
+            % Skip variants without architecture field
+            continue
+        end
+
+        if strcmp(arch, currentArch) || strcmp(arch, 'any')
+            compatible = [compatible, {v}];
+        end
+    end
+
+    if isempty(compatible)
+        bestVariant = [];
+        return
+    end
+
+    % Prefer exact architecture matches over 'any'
+    exactMatches = {};
+    for i = 1:length(compatible)
+        v = compatible{i};
+        arch = v.architecture;
+        if strcmp(arch, currentArch)
+            exactMatches = [exactMatches, {v}];
+        end
+    end
+
+    if ~isempty(exactMatches)
+        bestVariant = selectLatest(exactMatches);
+    else
+        bestVariant = selectLatest(compatible);
+    end
+end
+
+function best = selectLatest(variants)
+% Select the variant with the latest version from a list of variants
+    best = variants{1};
+    for i = 2:length(variants)
+        if mip.utils.compare_versions(variants{i}.version, best.version) > 0
+            best = variants{i};
+        end
+    end
+end
