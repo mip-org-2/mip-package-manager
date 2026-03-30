@@ -154,8 +154,12 @@ function updateSinglePackage(packageArg, channelOverride)
         rmdir(tempDir, 's');
     end
 
-    % Post-update messages
+    % Post-update: restore path for self-update
     if isSelfUpdate
+        loadScript = fullfile(pkgDir, 'load_package.m');
+        if exist(loadScript, 'file')
+            run(loadScript);
+        end
         fprintf('\nmip has been updated to %s.\n', latestVersion);
     elseif wasLoaded
         fprintf('Note: "%s" was loaded. Run "mip unload %s" and "mip load %s" to use the new version.\n', ...
