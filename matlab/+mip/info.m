@@ -99,12 +99,22 @@ try
     latestVariants = versionMap(latestVersion);
     compatibleVariant = [];
 
+    canFallbackToWasm = startsWith(currentArch, 'numbl_') && ~strcmp(currentArch, 'numbl_wasm');
     for i = 1:length(latestVariants)
         v = latestVariants{i};
         arch = v.architecture;
         if strcmp(arch, currentArch) || strcmp(arch, 'any')
             compatibleVariant = v;
             break;
+        end
+    end
+    if isempty(compatibleVariant) && canFallbackToWasm
+        for i = 1:length(latestVariants)
+            v = latestVariants{i};
+            if strcmp(v.architecture, 'numbl_wasm')
+                compatibleVariant = v;
+                break;
+            end
         end
     end
 

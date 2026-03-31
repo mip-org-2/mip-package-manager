@@ -52,7 +52,8 @@ try
                 continue
             end
 
-            if strcmp(arch, currentArch) || strcmp(arch, 'any')
+            canFallbackToWasm = startsWith(currentArch, 'numbl_') && ~strcmp(currentArch, 'numbl_wasm');
+            if strcmp(arch, currentArch) || strcmp(arch, 'any') || (canFallbackToWasm && strcmp(arch, 'numbl_wasm'))
                 fqn = mip.utils.make_fqn(org, channelName, pkg.name);
                 if ~ismember(fqn, availablePackages)
                     availablePackages = [availablePackages, {fqn}]; %#ok<AGROW>

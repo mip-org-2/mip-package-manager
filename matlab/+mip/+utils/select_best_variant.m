@@ -13,7 +13,10 @@ if isempty(variants)
     return
 end
 
-% Filter to compatible variants (exact match or 'any')
+% For numbl_* architectures, numbl_wasm is a valid fallback
+canFallbackToWasm = startsWith(currentArch, 'numbl_') && ~strcmp(currentArch, 'numbl_wasm');
+
+% Filter to compatible variants (exact match, numbl_wasm fallback, or 'any')
 compatible = {};
 for i = 1:length(variants)
     v = variants{i};
@@ -23,7 +26,7 @@ for i = 1:length(variants)
         continue
     end
 
-    if strcmp(arch, currentArch) || strcmp(arch, 'any')
+    if strcmp(arch, currentArch) || strcmp(arch, 'any') || (canFallbackToWasm && strcmp(arch, 'numbl_wasm'))
         compatible = [compatible, {v}]; %#ok<AGROW>
     end
 end
@@ -33,9 +36,15 @@ if isempty(compatible)
     return
 end
 
-% Prefer exact architecture matches over 'any'
+% Prefer exact match > numbl_wasm fallback > 'any'
 for i = 1:length(compatible)
     if strcmp(compatible{i}.architecture, currentArch)
+        bestVariant = compatible{i};
+        return
+    end
+end
+for i = 1:length(compatible)
+    if strcmp(compatible{i}.architecture, 'numbl_wasm')
         bestVariant = compatible{i};
         return
     end
