@@ -1,8 +1,6 @@
 function mipConfig = read_mip_yaml(packageDir)
 %READ_MIP_YAML   Read and parse a package's mip.yaml file.
 %
-% Requires yamlmatlab on the MATLAB path.
-%
 % Args:
 %   packageDir - Path to the directory containing mip.yaml
 %
@@ -18,7 +16,13 @@ if ~exist(mipYamlPath, 'file')
 end
 
 try
-    mipConfig = yaml.ReadYaml(mipYamlPath);
+    fid = fopen(mipYamlPath, 'r');
+    if fid == -1
+        error('mip:fileError', 'Could not open file: %s', mipYamlPath);
+    end
+    yamlText = fread(fid, '*char')';
+    fclose(fid);
+    mipConfig = mip.utils.parse_yaml(yamlText);
 catch ME
     error('mip:yamlParseFailed', ...
           'Failed to parse mip.yaml in %s: %s', packageDir, ME.message);

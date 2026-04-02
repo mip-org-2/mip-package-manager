@@ -9,9 +9,6 @@ if nargin < 2
     editable = false;
 end
 
-% Ensure yamlmatlab is available
-mip.utils.ensure_yamlmatlab();
-
 % Resolve to absolute path
 sourceDir = char(java.io.File(sourceDir).getCanonicalPath());
 
