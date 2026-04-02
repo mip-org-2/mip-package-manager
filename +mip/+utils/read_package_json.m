@@ -6,7 +6,7 @@ function pkgInfo = read_package_json(packageDir)
 %
 % Returns:
 %   pkgInfo - Struct containing package metadata with fields:
-%             name, version, dependencies, exposed_symbols, etc.
+%             name, version, dependencies, etc.
 %
 % Example:
 %   info = mip.utils.read_package_json('/path/to/package');
@@ -45,17 +45,6 @@ try
     elseif ~iscell(pkgInfo.dependencies)
         % Convert to cell array if needed
         pkgInfo.dependencies = {pkgInfo.dependencies};
-    end
-
-    if ~isfield(pkgInfo, 'exposed_symbols')
-        pkgInfo.exposed_symbols = {};
-    elseif isempty(pkgInfo.exposed_symbols) || ...
-           (isnumeric(pkgInfo.exposed_symbols) && isempty(pkgInfo.exposed_symbols))
-        % jsondecode returns 0x0 double for empty JSON arrays
-        pkgInfo.exposed_symbols = {};
-    elseif ~iscell(pkgInfo.exposed_symbols)
-        % Convert to cell array if needed
-        pkgInfo.exposed_symbols = {pkgInfo.exposed_symbols};
     end
 
 catch ME

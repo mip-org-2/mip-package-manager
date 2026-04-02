@@ -162,7 +162,6 @@ function createMipJson(pkgDir, mipConfig, sourceDir, isEditable)
     mipData.homepage = mipConfig.homepage;
     mipData.repository = mipConfig.repository;
     mipData.architecture = 'any';
-    mipData.exposed_symbols = {};
     mipData.install_type = 'local';
 
     if isEditable

@@ -12,7 +12,7 @@ function info(varargin)
 %
 % Displays detailed information about a package from the repository,
 % including all available versions, installation status, loaded status,
-% dependencies, and exposed symbols (if installed).
+% dependencies.
 
 if nargin < 1
     error('mip:noPackage', 'Package name is required');
@@ -196,25 +196,6 @@ try
         end
     else
         fprintf('Dependencies: None\n');
-    end
-
-    % Show exposed symbols only if installed
-    if isInstalled
-        if isfield(installedInfo, 'exposed_symbols') && ~isempty(installedInfo.exposed_symbols)
-            symbols = installedInfo.exposed_symbols;
-            if ~iscell(symbols)
-                symbols = {symbols};
-            end
-            fprintf('\nExposed Symbols (%d):\n', length(symbols));
-            for i = 1:min(10, length(symbols))
-                fprintf('  - %s\n', symbols{i});
-            end
-            if length(symbols) > 10
-                fprintf('  ... and %d more\n', length(symbols) - 10);
-            end
-        else
-            fprintf('\nExposed Symbols: None listed\n');
-        end
     end
 
     fprintf('\n');

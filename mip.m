@@ -14,7 +14,6 @@ function varargout = mip(command, varargin)
 %   mip unload <package>                     - Unload a package from MATLAB path
 %   mip unload --all                         - Unload all non-sticky packages
 %   mip unload --all --force                 - Unload all packages (including sticky)
-%   mip find-name-collisions                 - Find symbol name collisions
 %   mip arch                                 - Display current architecture tag
 %   mip info <package>                       - Display package information
 %   mip info --channel dev <package>         - Display info from a specific channel
@@ -85,9 +84,6 @@ switch command
             error('mip:noPackage', 'No package specified for unload command.');
         end
         mip.unload(varargin{:});
-
-    case 'find-name-collisions'
-        mip.find_name_collisions();
 
     case {'architecture', 'arch'}
         fprintf('%s\n', mip.arch());
