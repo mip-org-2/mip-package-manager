@@ -56,6 +56,21 @@ elseif ~iscell(mipConfig.addpaths)
     mipConfig.addpaths = {mipConfig.addpaths};
 end
 
+% Normalize builds to cell array of structs
+if ~isfield(mipConfig, 'builds')
+    mipConfig.builds = {};
+elseif ~iscell(mipConfig.builds)
+    mipConfig.builds = num2cell(mipConfig.builds);
+end
+% Ensure each build entry has architectures as a cell array
+for i = 1:length(mipConfig.builds)
+    b = mipConfig.builds{i};
+    if isfield(b, 'architectures') && ~iscell(b.architectures)
+        b.architectures = {b.architectures};
+        mipConfig.builds{i} = b;
+    end
+end
+
 % Ensure optional string fields
 if ~isfield(mipConfig, 'description')
     mipConfig.description = '';

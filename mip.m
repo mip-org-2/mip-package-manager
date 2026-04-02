@@ -21,6 +21,7 @@ function varargout = mip(command, varargin)
 %   mip avail --channel dev                  - List packages from a specific channel
 %   mip index                                - Display the mip package index URL
 %   mip version                              - Display mip version
+%   mip bundle <directory> [--output <dir>]   - Build .mhl from local package
 %   mip help [command]                       - Show help text for command
 %
 % Channels:
@@ -93,6 +94,12 @@ switch command
             error('mip:noPackage', 'No package specified for info command.');
         end
         mip.info(varargin{:});
+
+    case 'bundle'
+        if nargin < 2
+            error('mip:noDirectory', 'A directory path is required for bundle command.');
+        end
+        mip.bundle(varargin{:});
 
     case 'avail'
         mip.avail(varargin{:});

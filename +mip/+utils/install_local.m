@@ -3,7 +3,7 @@ function install_local(sourceDir, editable)
 %
 % Args:
 %   sourceDir - Path to the directory containing mip.yaml
-%   editable  - If true, create an editable install (symlink-style)
+%   editable  - If true, create an editable install (no copy, no compile)
 
 if nargin < 2
     editable = false;
@@ -12,7 +12,7 @@ end
 % Resolve to absolute path
 sourceDir = char(java.io.File(sourceDir).getCanonicalPath());
 
-% Read mip.yaml
+% Read mip.yaml to get package name
 mipConfig = mip.utils.read_mip_yaml(sourceDir);
 packageName = mipConfig.name;
 
@@ -31,11 +31,9 @@ if exist(pkgDir, 'dir')
     return;
 end
 
-% Install dependencies if any
+% Check dependencies are installed
 if ~isempty(mipConfig.dependencies)
     fprintf('Dependencies: %s\n', strjoin(mipConfig.dependencies, ', '));
-    fprintf('Note: dependencies must be installed separately for local packages.\n');
-    % Check that dependencies are installed
     for i = 1:length(mipConfig.dependencies)
         dep = mipConfig.dependencies{i};
         depFqn = mip.utils.resolve_bare_name(dep);
@@ -46,49 +44,10 @@ if ~isempty(mipConfig.dependencies)
     end
 end
 
-% Compute addpaths from mip.yaml
-addpathsList = mip.utils.compute_addpaths(sourceDir, mipConfig.addpaths);
-
-% Create the package directory
-parentDir = fileparts(pkgDir);
-if ~exist(parentDir, 'dir')
-    mkdir(parentDir);
-end
-
 if editable
-    % Editable install: create a thin wrapper that points to the source
-    fprintf('Installing "%s" in editable mode...\n', fqn);
-    mkdir(pkgDir);
-
-    % Create load_package.m that adds the SOURCE directory paths
-    createLoadScript(pkgDir, sourceDir, addpathsList);
-    createUnloadScript(pkgDir, sourceDir, addpathsList);
-
-    % Create mip.json with editable flag and source path
-    createMipJson(pkgDir, mipConfig, sourceDir, true);
-
-    fprintf('Editable install complete. Changes in %s will be reflected immediately.\n', sourceDir);
+    installEditable(sourceDir, mipConfig, pkgDir, fqn);
 else
-    % Regular install: copy package contents to mip packages dir
-    fprintf('Installing "%s"...\n', fqn);
-
-    % Copy the entire source directory
-    copyfile(sourceDir, pkgDir);
-
-    % Remove .git directory if present
-    gitDir = fullfile(pkgDir, '.git');
-    if exist(gitDir, 'dir')
-        rmdir(gitDir, 's');
-    end
-
-    % Create load/unload scripts that reference the installed copy
-    createLoadScript(pkgDir, pkgDir, addpathsList);
-    createUnloadScript(pkgDir, pkgDir, addpathsList);
-
-    % Create mip.json
-    createMipJson(pkgDir, mipConfig, '', false);
-
-    fprintf('Install complete.\n');
+    installCopy(sourceDir, pkgDir, fqn);
 end
 
 % Mark as directly installed
@@ -98,83 +57,82 @@ fprintf('Successfully installed "%s"\n', fqn);
 end
 
 
-function createLoadScript(pkgDir, baseDir, addpathsList)
-% Create load_package.m
+function installCopy(sourceDir, pkgDir, fqn)
+% Non-editable install: prepare in temp dir, then move into place.
 
-    loadFile = fullfile(pkgDir, 'load_package.m');
-    fid = fopen(loadFile, 'w');
-    if fid == -1
-        error('mip:fileError', 'Could not create load_package.m');
-    end
+    stagingDir = tempname;
 
-    fprintf(fid, 'function load_package()\n');
-    fprintf(fid, '    %% Add package directories to MATLAB path\n');
+    try
+        fprintf('Installing "%s"...\n', fqn);
+        mip.build.prepare_package(sourceDir, stagingDir);
 
-    for i = 1:length(addpathsList)
-        p = addpathsList{i};
-        if strcmp(p, '.')
-            fprintf(fid, '    addpath(''%s'');\n', baseDir);
-        else
-            fprintf(fid, '    addpath(fullfile(''%s'', ''%s''));\n', baseDir, p);
+        % Create parent directories if needed
+        parentDir = fileparts(pkgDir);
+        if ~exist(parentDir, 'dir')
+            mkdir(parentDir);
         end
+
+        % Move staging dir to final location
+        movefile(stagingDir, pkgDir);
+        fprintf('Install complete.\n');
+
+    catch ME
+        % Clean up staging dir on failure
+        if exist(stagingDir, 'dir')
+            rmdir(stagingDir, 's');
+        end
+        rethrow(ME);
     end
 
-    fprintf(fid, 'end\n');
-    fclose(fid);
 end
 
 
-function createUnloadScript(pkgDir, baseDir, addpathsList)
-% Create unload_package.m
+function installEditable(sourceDir, mipConfig, pkgDir, fqn)
+% Editable install: create thin wrapper pointing to original source.
 
-    unloadFile = fullfile(pkgDir, 'unload_package.m');
-    fid = fopen(unloadFile, 'w');
-    if fid == -1
-        error('mip:fileError', 'Could not create unload_package.m');
-    end
+    fprintf('Installing "%s" in editable mode...\n', fqn);
 
-    fprintf(fid, 'function unload_package()\n');
-    fprintf(fid, '    %% Remove package directories from MATLAB path\n');
+    % Match build and resolve config to determine addpaths
+    [buildEntry, effectiveArch] = mip.build.match_build(mipConfig);
+    resolvedConfig = mip.build.resolve_build_config(mipConfig, buildEntry);
 
+    % Compute addpaths relative to the source directory
+    addpathsList = mip.build.compute_addpaths(sourceDir, resolvedConfig.addpaths);
+
+    % Convert to absolute paths for editable install
+    absolutePaths = cell(size(addpathsList));
     for i = 1:length(addpathsList)
-        p = addpathsList{i};
-        if strcmp(p, '.')
-            fprintf(fid, '    rmpath(''%s'');\n', baseDir);
+        if strcmp(addpathsList{i}, '.')
+            absolutePaths{i} = sourceDir;
         else
-            fprintf(fid, '    rmpath(fullfile(''%s'', ''%s''));\n', baseDir, p);
+            absolutePaths{i} = fullfile(sourceDir, addpathsList{i});
         end
     end
 
-    fprintf(fid, 'end\n');
-    fclose(fid);
-end
+    % Create package directory
+    parentDir = fileparts(pkgDir);
+    if ~exist(parentDir, 'dir')
+        mkdir(parentDir);
+    end
+    mkdir(pkgDir);
 
+    % Generate load/unload scripts with absolute paths
+    scriptOpts = struct('absolute', true);
+    mip.build.create_load_script(pkgDir, absolutePaths, scriptOpts);
+    mip.build.create_unload_script(pkgDir, absolutePaths, scriptOpts);
 
-function createMipJson(pkgDir, mipConfig, sourceDir, isEditable)
-% Create mip.json metadata file
+    % Create mip.json
+    jsonOpts = struct('editable', true, 'source_path', sourceDir);
+    mip.build.create_mip_json(pkgDir, mipConfig, resolvedConfig, effectiveArch, jsonOpts);
 
-    mipData = struct();
-    mipData.name = mipConfig.name;
-    mipData.version = mipConfig.version;
-    mipData.description = mipConfig.description;
-    mipData.dependencies = mipConfig.dependencies;
-    mipData.license = mipConfig.license;
-    mipData.homepage = mipConfig.homepage;
-    mipData.repository = mipConfig.repository;
-    mipData.architecture = 'any';
-    mipData.install_type = 'local';
+    fprintf('Editable install complete. Changes in %s will be reflected immediately.\n', sourceDir);
 
-    if isEditable
-        mipData.editable = true;
-        mipData.source_path = sourceDir;
+    % Print compile hint if a compile script is specified
+    if isfield(resolvedConfig, 'compile_script') && ...
+            ~isempty(resolvedConfig.compile_script)
+        fprintf('\nNote: This is an editable install. No compilation was performed.\n');
+        fprintf('To compile, run in MATLAB:\n');
+        fprintf('  cd(''%s''); run(''%s'');\n', sourceDir, resolvedConfig.compile_script);
     end
 
-    jsonText = jsonencode(mipData);
-    mipJsonPath = fullfile(pkgDir, 'mip.json');
-    fid = fopen(mipJsonPath, 'w');
-    if fid == -1
-        error('mip:fileError', 'Could not create mip.json');
-    end
-    fwrite(fid, jsonText);
-    fclose(fid);
 end
