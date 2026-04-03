@@ -86,6 +86,14 @@ end
 
 % Create mip.json
 fprintf('Creating mip.json...\n');
-mip.build.create_mip_json(stagingDir, mipConfig, resolvedConfig, effectiveArch);
+jsonOpts = struct();
+sourceHashFile = fullfile(pkgSubdir, '.source_hash');
+if exist(sourceHashFile, 'file')
+    fid = fopen(sourceHashFile, 'r');
+    jsonOpts.source_hash = strtrim(fread(fid, '*char')');
+    fclose(fid);
+    delete(sourceHashFile);
+end
+mip.build.create_mip_json(stagingDir, mipConfig, resolvedConfig, effectiveArch, jsonOpts);
 
 end
